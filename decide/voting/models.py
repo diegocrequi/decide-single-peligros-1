@@ -8,10 +8,23 @@ from base.models import Auth, Key
 
 
 class Question(models.Model):
+    TYPES = [
+        ('O', 'Options'),
+        ('B', 'Binary')
+    ]
     desc = models.TextField()
+    question_type = models.CharField(max_length=1, choices=TYPES, default='O')
 
     def __str__(self):
         return self.desc
+
+@receiver(post_save, sender = Question)
+def my_handler(sender, instance, **kwargs):
+    if instance.question_type == 'B':
+        instance.options.all().delete()
+        instance.options.create(option = 'Yes')
+        instance.options.create(option = 'No')
+
 
 
 class QuestionOption(models.Model):
@@ -19,10 +32,13 @@ class QuestionOption(models.Model):
     number = models.PositiveIntegerField(blank=True, null=True)
     option = models.TextField()
 
-    def save(self):
+    def save(self, *args, **kwargs) :
+        if self.question.question_type == 'B' and self.option != 'Yes' and self.option != 'No':
+            return
+
         if not self.number:
             self.number = self.question.options.count() + 2
-        return super().save()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return '{} ({})'.format(self.option, self.number)

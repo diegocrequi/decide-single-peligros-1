@@ -1,4 +1,4 @@
-var select = document.getElementById("id_tipo");
+var select = document.getElementById("id_question_type");
 var options = document.getElementById("options-group");
 console.log(select)
 console.log(options)

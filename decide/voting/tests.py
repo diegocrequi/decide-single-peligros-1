@@ -208,51 +208,47 @@ class VotingTestCase(BaseTestCase):
         response = self.client.put('/voting/{}/'.format(voting.pk), data, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), 'Voting already tallied')
-'''
-def test_create_question(self):
-        q_option = Question(desc='test question option',tipo='O')
-        q_binaria = Question(desc='test question binaria', tipo='B')
-        q_option.save()
-        q_binaria.save()
-        self.assertEqual(Question.objects.get(desc='test question option').tipo, 'O')
-        self.assertEqual(Question.objects.get(desc='test question binaria').tipo, 'B')
 
-def test_create_questionOptionOptional(self):
-        q_option = Question(desc='test question option',tipo='O')
-        q_options1 = QuestionOption(question = q_option, number=2, option='Bien')
-        q_options1.save()
-        q_options2 = QuestionOption(question = q_option, number=3, option='Mal')
-        q_options2.save()
-        q_option.save()
+    def test_create_question(self):
+            q_option = Question(desc='test question option',question_type='O')
+            q_binaria = Question(desc='test question binaria', question_type='B')
+            q_option.save()
+            q_binaria.save()
+            self.assertEqual(Question.objects.get(desc='test question option').question_type, 'O')
+            self.assertEqual(Question.objects.get(desc='test question binaria').question_type, 'B')
 
-        test1 = Question.objects.get(desc='test question option').options.all()
-        i = 2
-        l = 0
-        lista = list()
-        lista.append('Bien')
-        lista.append('Mal')
-        for elemento in test1:
-            self.assertEqual(elemento.number, i)
-            self.assertEqual(elemento.option, lista[l])
-            i+=1
-            l+=1
-'''
-def create_questionOptionBinary(self):
-        q_option = Question(desc='test question binaria',tipo='B')
-        q_options1 = QuestionOption(question = q_option, option='Yes')
-        q_options1.save()
-        q_options2 = QuestionOption(question = q_option, option='No')
-        q_options2.save()
-        q_option.save()
+    def test_create_questionOptionOptional(self):
+            q_option = Question(desc='test question option',question_type='O')
+            q_option.save()
+            q_options1 = QuestionOption(question = q_option, number=2, option='Bien')
+            q_options1.save()
+            q_options2 = QuestionOption(question = q_option, number=3, option='Mal')
+            q_options2.save()
 
-        test1 = Question.objects.get(desc='test question binaria').options.all()
-        i = 2
-        l = 0
-        lista = list()
-        lista.append('Yes')
-        lista.append('No')
-        for elemento in test1:
-            self.assertEqual(elemento.number, i)
-            self.assertEqual(elemento.option, lista[l])
-            i+=1
-            l+=1
+            test1 = Question.objects.get(desc='test question option').options.all()
+            i = 2
+            l = 0
+            lista = list()
+            lista.append('Bien')
+            lista.append('Mal')
+            for elemento in test1:
+                self.assertEqual(elemento.number, i)
+                self.assertEqual(elemento.option, lista[l])
+                i+=1
+                l+=1
+
+    def test_create_questionOptionBinary(self):
+            q_option = Question(desc='test question binaria',question_type='B')
+            q_option.save()
+            test1 = Question.objects.get(desc='test question binaria').options.all()
+            print(test1)
+            i = 2
+            l = 0
+            lista = list()
+            lista.append('Yes')
+            lista.append('No')
+            for elemento in test1:
+                self.assertEqual(elemento.number, i)
+                self.assertEqual(elemento.option, lista[l])
+                i+=1
+                l+=1

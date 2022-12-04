@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Question, QuestionOption, Voting
+from .models import Binary_Question, Binary_Question_Option, Binary_Voting, Question, QuestionOption, Voting
 from base.serializers import KeySerializer, AuthSerializer
 
 
@@ -25,7 +25,7 @@ class VotingSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Voting
         fields = ('id', 'name', 'desc', 'question', 'start_date',
-                  'end_date', 'pub_key', 'auths', 'tally', 'postproc')
+                  'end_date', 'pub_key', 'auths', 'tally', 'postproc', 'type')
 
 
 class SimpleVotingSerializer(serializers.HyperlinkedModelSerializer):
@@ -34,3 +34,32 @@ class SimpleVotingSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Voting
         fields = ('name', 'desc', 'question', 'start_date', 'end_date')
+
+
+class BinaryQuestionOptionSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Binary_Question_Option
+        fields = ('number', 'option')
+
+class BinaryQuestionSerializer(serializers.HyperlinkedModelSerializer):
+    options = BinaryQuestionOptionSerializer(many=True)
+    class Meta:
+        model = Binary_Question
+        fields = ('desc', 'options')
+
+class BinaryVotingSerializer(serializers.HyperlinkedModelSerializer):
+    question = BinaryQuestionSerializer(many=False)
+    pub_key = KeySerializer()
+    auths = AuthSerializer(many=True)
+
+    class Meta:
+        model = Binary_Voting
+        fields = ('id', 'name', 'desc', 'question', 'start_date',
+                  'end_date', 'pub_key', 'auths', 'tally', 'postproc', 'type')
+
+class SimpleBinaryVotingSerializer(serializers.HyperlinkedModelSerializer):
+    question = BinaryQuestionSerializer(many=False)
+
+    class Meta:
+        model = Binary_Voting
+        fields = ('name', 'desc', 'question', 'start_date', 'end_date', 'type')

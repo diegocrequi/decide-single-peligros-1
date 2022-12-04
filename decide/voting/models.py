@@ -140,13 +140,11 @@ class QuestionOption(models.Model):
     number = models.PositiveIntegerField(blank=True, null=True)
     option = models.TextField()
 
-    def save(self, *args, **kwargs) :
-        if self.question.question_type == 'B' and self.option != 'Yes' and self.option != 'No':
-            return
+    def save(self, *args, **kwargs):
 
         if not self.number:
             self.number = self.question.options.count() + 2
-        return super().save(*args, **kwargs)
+        return super().save()
 
     def __str__(self):
         return '{} ({})'.format(self.option, self.number)

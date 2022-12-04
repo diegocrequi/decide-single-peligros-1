@@ -12,18 +12,6 @@ from .serializers import (BinaryVotingSerializer, SimpleBinaryVotingSerializer, 
 from base.perms import UserIsStaff
 from base.models import Auth
 
-class listVot(generics.ListCreateAPIView):
-    queryset = Voting.objects.all()
-    serializer_class = VotingSerializerList
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
-
-    def get(self, request, *args, **kwargs):
-        version = request.version
-        if version not in settings.ALLOWED_VERSIONS:
-            version = settings.DEFAULT_VERSION
-
-        return super().get(request, *args, **kwargs)
-
 class VotingView(generics.ListCreateAPIView):
     queryset = Voting.objects.all()
     serializer_class = VotingSerializer

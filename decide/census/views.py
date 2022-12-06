@@ -31,6 +31,7 @@ class CensusCreate(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         voting_id = request.GET.get('voting_id')
+        type = request.GET.get('type')
         voters = Census.objects.filter(voting_id=voting_id).values_list('voter_id', flat=True)
         return Response({'voters': voters})
 
@@ -46,9 +47,8 @@ class CensusDetail(generics.RetrieveDestroyAPIView):
 
     def retrieve(self, request, voting_id, *args, **kwargs):
         voter = request.GET.get('voter_id')
-        req_type = request.GET.get('type')
         try:
-            Census.objects.get(voting_id=voting_id, voter_id=voter,type = req_type)
+            Census.objects.get(voting_id=voting_id, voter_id=voter)
         except ObjectDoesNotExist:
-            return Response('Invalid data', status=ST_401)
-        return Response('Valid data')
+            return Response('Invalid voter', status=ST_401)
+        return Response('Valid voter')

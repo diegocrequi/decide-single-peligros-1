@@ -23,6 +23,9 @@ class Mixnet(models.Model):
                                related_name="mixnets_pub",
                                on_delete=models.SET_NULL)
 
+    votingTypes = (('V', 'Voting'), ('BV', 'BinaryVoting'))
+    type = models.CharField(max_length=2, choices=votingTypes, default='V')
+
     def __str__(self):
         auths = ", ".join(a.name for a in self.auths.all())
         return "Voting: {}, Auths: {}\nPubKey: {}".format(self.voting_id,

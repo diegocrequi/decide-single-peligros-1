@@ -83,6 +83,31 @@ class VotingTestCase(BaseTestCase):
                 voter = voters.pop()
                 mods.post('store', json=data)
         return clear
+    
+    def test_complete_voting(self):
+        v = self.create_voting()
+        self.create_voters(v)
+
+        v.create_pubkey()
+        v.start_date = timezone.now()
+        v.save()
+
+        clear = self.store_votes(v)
+
+        self.login()  # set token
+        v.tally_votes(self.token)
+
+        tally = v.tally
+        tally.sort()
+        tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
+
+        for q in v.question.options.all():
+            print(q)
+            self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
+
+        for q in v.postproc:
+            self.assertEqual(tally.get(q["number"], 0), q["votes"])
+
 
     def test_create_voting_from_api(self):
         data = {'name': 'Example'}
@@ -364,6 +389,31 @@ class BinaryVotingTestCase(BaseTestCase):
         response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), 'Voting already tallied')
+
+
+    # def test_complete_voting(self):
+    #     v = self.create_voting()
+    #     self.create_voters(v)
+
+    #     v.create_pubkey()
+    #     v.start_date = timezone.now()
+    #     v.save()
+
+    #     clear = self.store_votes(v)
+
+    #     self.login()  # set token
+    #     v.tally_votes(self.token)
+
+    #     tally = v.tally
+    #     tally.sort()
+    #     tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
+
+    #     for q in v.question.options.all():
+            
+    #         self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
+
+    #     for q in v.postproc:
+    #         self.assertEqual(tally.get(q["number"], 0), q["votes"])
 
 
 

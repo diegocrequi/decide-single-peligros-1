@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.exceptions import ValidationError
 
 class Census(models.Model):
     voting_id = models.PositiveIntegerField()
@@ -8,4 +8,4 @@ class Census(models.Model):
     votingTypes = (('V', 'Voting'), ('BV', 'BinaryVoting'))
     type = models.CharField(max_length=2, choices=votingTypes, default='V')
     class Meta:
-        unique_together = (('voting_id', 'voter_id'),)
+        unique_together = (('voting_id', 'voter_id','type'),)

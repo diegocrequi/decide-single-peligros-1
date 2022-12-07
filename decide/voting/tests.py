@@ -13,7 +13,7 @@ from census.models import Census
 from mixnet.mixcrypt import ElGamal
 from mixnet.mixcrypt import MixCrypt
 from mixnet.models import Auth
-from voting.models import Voting, Question, QuestionOption
+from voting.models import Voting, Question, QuestionOption, Binary_Question, Binary_Question_Option, Binary_Voting
 
 
 class VotingTestCase(BaseTestCase):
@@ -37,7 +37,7 @@ class VotingTestCase(BaseTestCase):
         for i in range(5):
             opt = QuestionOption(question=q, option='option {}'.format(i+1))
             opt.save()
-        v = Voting(name='test voting', question=q)
+        v = Voting(name='test voting', question=q, type='V')
         v.save()
 
         a, _ = Auth.objects.get_or_create(url=settings.BASEURL,
@@ -52,7 +52,7 @@ class VotingTestCase(BaseTestCase):
             u, _ = User.objects.get_or_create(username='testvoter{}'.format(i))
             u.is_active = True
             u.save()
-            c = Census(voter_id=u.id, voting_id=v.id)
+            c = Census(voter_id=u.id, voting_id=v.id, type=v.type)
             c.save()
 
     def get_or_create_user(self, pk):
@@ -74,6 +74,7 @@ class VotingTestCase(BaseTestCase):
                 data = {
                     'voting': v.id,
                     'voter': voter.voter_id,
+                    'type': v.type,
                     'vote': { 'a': a, 'b': b },
                 }
                 clear[opt.number] += 1
@@ -82,7 +83,7 @@ class VotingTestCase(BaseTestCase):
                 voter = voters.pop()
                 mods.post('store', json=data)
         return clear
-
+    
     def test_complete_voting(self):
         v = self.create_voting()
         self.create_voters(v)
@@ -101,10 +102,12 @@ class VotingTestCase(BaseTestCase):
         tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
 
         for q in v.question.options.all():
+            print(q)
             self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
 
         for q in v.postproc:
             self.assertEqual(tally.get(q["number"], 0), q["votes"])
+
 
     def test_create_voting_from_api(self):
         data = {'name': 'Example'}
@@ -125,7 +128,8 @@ class VotingTestCase(BaseTestCase):
             'name': 'Example',
             'desc': 'Description example',
             'question': 'I want a ',
-            'question_opt': ['cat', 'dog', 'horse']
+            'question_opt': ['cat', 'dog', 'horse'],
+            'type':'V'
         }
 
         response = self.client.post('/voting/', data, format='json')
@@ -135,8 +139,8 @@ class VotingTestCase(BaseTestCase):
         voting = self.create_voting()
 
         data = {'action': 'start'}
-        #response = self.client.post('/voting/{}/'.format(voting.pk), data, format='json')
-        #self.assertEqual(response.status_code, 401)
+        response = self.client.post('/voting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 401)
 
         # login with user no admin
         self.login(user='noadmin')
@@ -209,46 +213,207 @@ class VotingTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), 'Voting already tallied')
 
-    def test_create_question(self):
-            q_option = Question(desc='test question option',question_type='O')
-            q_binaria = Question(desc='test question binaria', question_type='B')
-            q_option.save()
-            q_binaria.save()
-            self.assertEqual(Question.objects.get(desc='test question option').question_type, 'O')
-            self.assertEqual(Question.objects.get(desc='test question binaria').question_type, 'B')
 
-    def test_create_questionOptionOptional(self):
-            q_option = Question(desc='test question option',question_type='O')
-            q_option.save()
-            q_options1 = QuestionOption(question = q_option, number=2, option='Bien')
-            q_options1.save()
-            q_options2 = QuestionOption(question = q_option, number=3, option='Mal')
-            q_options2.save()
+##TESTS CORRESPONDIENTES A PREGUNTAS BINARIAS
 
-            test1 = Question.objects.get(desc='test question option').options.all()
-            i = 2
-            l = 0
-            lista = list()
-            lista.append('Bien')
-            lista.append('Mal')
-            for elemento in test1:
-                self.assertEqual(elemento.number, i)
-                self.assertEqual(elemento.option, lista[l])
-                i+=1
-                l+=1
+class BinaryVotingTestCase(BaseTestCase):
 
-    def test_create_questionOptionBinary(self):
-            q_option = Question(desc='test question binaria',question_type='B')
-            q_option.save()
-            test1 = Question.objects.get(desc='test question binaria').options.all()
-            print(test1)
-            i = 2
-            l = 0
-            lista = list()
-            lista.append('Yes')
-            lista.append('No')
-            for elemento in test1:
-                self.assertEqual(elemento.number, i)
-                self.assertEqual(elemento.option, lista[l])
-                i+=1
-                l+=1
+    def setUp(self):
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+
+    def encrypt_msg(self, msg, v, bits=settings.KEYBITS):
+        pk = v.pub_key
+        p, g, y = (pk.p, pk.g, pk.y)
+        k = MixCrypt(bits=bits)
+        k.k = ElGamal.construct((p, g, y))
+        return k.encrypt(msg)
+
+    def create_voting(self):
+        q = Binary_Question(desc='BINARY QUESTION')
+        q.save()
+        opt1 = Binary_Question_Option(question=q, option=True)
+        opt1.save()
+        opt2 = Binary_Question_Option(question=q, option=False)
+        opt2.save()
+
+        v = Binary_Voting(name='BINARY VOTING', question=q, type='BV')
+        v.save()
+
+        a, _ = Auth.objects.get_or_create(url=settings.BASEURL,
+                                          defaults={'me': True, 'name': 'test auth'})
+        a.save()
+        v.auths.add(a)
+
+        return v
+
+    def create_voters(self, v):
+        for i in range(100):
+            u, _ = User.objects.get_or_create(username='testvoter{}'.format(i))
+            u.is_active = True
+            u.save()
+            c = Census(voter_id=u.id, voting_id=v.id, type=v.type)
+            c.save()
+
+    def get_or_create_user(self, pk):
+        user, _ = User.objects.get_or_create(pk=pk)
+        user.username = 'user{}'.format(pk)
+        user.set_password('qwerty')
+        user.save()
+        return user
+
+    def store_votes(self, v):
+        voters = list(Census.objects.filter(voting_id=v.id, type=v.type))
+        voter = voters.pop()
+
+        clear = {}
+        for opt in v.question.options.all():
+            clear[opt.number] = 0
+            for i in range(random.randint(0, 2)):
+                a, b = self.encrypt_msg(opt.number, v)
+                data = {
+                    'voting': v.id,
+                    'voter': voter.voter_id,
+                    'vote': { 'a': a, 'b': b },
+                    'type': v.type,
+                }
+                clear[opt.number] += 1
+                user = self.get_or_create_user(voter.voter_id)
+                self.login(user=user.username)
+                voter = voters.pop()
+                mods.post('store', json=data)
+        return clear
+
+    def test_create_voting_from_api(self):
+        data = {'name': 'Example'}
+        response = self.client.post('/voting/binaryVoting/', data, format='json')
+        self.assertEqual(response.status_code, 401)
+
+        # login with user no admin
+        self.login(user='noadmin')
+        response = self.client.post('/voting/binaryVoting/', data, format='json')
+        self.assertEqual(response.status_code, 403)
+
+        # login with user admin
+        self.login()
+        response = self.client.post('/voting/binaryVoting/', data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+        data = {
+            'name': 'Example',
+            'desc': 'Description example',
+            'question': 'This is a test example ',
+            'question_opt': ['True', 'False'],
+            'type': 'BV'
+        }
+
+        response = self.client.post('/voting/binaryVoting/', data, format='json')
+        self.assertEqual(response.status_code, 201)
+
+    def test_update_voting(self):
+        voting = self.create_voting()
+
+        data = {'action': 'start'}
+        response = self.client.post('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 401)
+
+        # login with user no admin
+        self.login(user='noadmin')
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 403)
+
+        # login with user admin
+        self.login()
+        data = {'action': 'bad'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+
+        # STATUS VOTING: not started
+        for action in ['stop', 'tally']:
+            data = {'action': action}
+            response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json(), 'Voting is not started')
+
+        data = {'action': 'start'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), 'Voting started')
+
+        # STATUS VOTING: started
+        data = {'action': 'start'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already started')
+
+        data = {'action': 'tally'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting is not stopped')
+
+        data = {'action': 'stop'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), 'Voting stopped')
+
+        # STATUS VOTING: stopped
+        data = {'action': 'start'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already started')
+
+        data = {'action': 'stop'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already stopped')
+
+        data = {'action': 'tally'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), 'Voting tallied')
+
+        # STATUS VOTING: tallied
+        data = {'action': 'start'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already started')
+
+        data = {'action': 'stop'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already stopped')
+
+        data = {'action': 'tally'}
+        response = self.client.put('/voting/binaryVoting/{}/'.format(voting.pk), data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), 'Voting already tallied')
+
+
+    def test_complete_voting(self):
+        v = self.create_voting()
+        self.create_voters(v)
+
+        v.create_pubkey()
+        v.start_date = timezone.now()
+        v.save()
+
+        clear = self.store_votes(v)
+
+        self.login()  # set token
+        v.tally_votes(self.token)
+
+        tally = v.tally
+        tally.sort()
+        tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
+
+        for q in v.question.options.all():
+            
+            self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
+
+        for q in v.postproc:
+            self.assertEqual(tally.get(q["number"], 0), q["votes"])
+
+
+

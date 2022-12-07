@@ -12,7 +12,7 @@ class CensusTestCase(BaseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.census = Census(voting_id=1, voter_id=1)
+        self.census = Census(voting_id=1, voter_id=1,type='V')
         self.census.save()
 
     def tearDown(self):
@@ -42,7 +42,7 @@ class CensusTestCase(BaseTestCase):
         self.assertEqual(response.json(), {'voters': [1]})
 
     def test_add_new_voters_conflict(self):
-        data = {'voting_id': 1, 'voters': [1]}
+        data = {'voting_id': 1, 'voters': [1], 'type':'V'}
         response = self.client.post('/census/', data, format='json')
         self.assertEqual(response.status_code, 401)
 
@@ -55,7 +55,7 @@ class CensusTestCase(BaseTestCase):
         self.assertEqual(response.status_code, 409)
 
     def test_add_new_voters(self):
-        data = {'voting_id': 2, 'voters': [1,2,3,4]}
+        data = {'voting_id': 2, 'voters': [1,2,3,4], 'type':'V'}
         response = self.client.post('/census/', data, format='json')
         self.assertEqual(response.status_code, 401)
 
@@ -69,7 +69,7 @@ class CensusTestCase(BaseTestCase):
         self.assertEqual(len(data.get('voters')), Census.objects.count() - 1)
 
     def test_destroy_voter(self):
-        data = {'voters': [1]}
+        data = {'voters': [1], 'type':'V'}
         response = self.client.delete('/census/{}/'.format(1), data, format='json')
         self.assertEqual(response.status_code, 204)
         self.assertEqual(0, Census.objects.count())

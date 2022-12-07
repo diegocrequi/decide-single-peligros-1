@@ -4,8 +4,11 @@ import django_filters.rest_framework
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import generics
+from django.shortcuts import get_object_or_404
+
 
 from .models import Vote
+from voting.models import Voting,Binary_Voting
 from .serializers import VoteSerializer
 from base import mods
 from base.perms import UserIsStaff
@@ -28,22 +31,27 @@ class StoreView(generics.ListAPIView):
          * voter: id
          * vote: { "a": int, "b": int }
         """
-
+        type = request.data.get('type')
         vid = request.data.get('voting')
-        voting = mods.get('voting', params={'id': vid})
-        if not voting or not isinstance(voting, list):
+        if type == 'V':
+            voting = get_object_or_404(Voting,pk=vid)
+        elif type == 'BV':
+            voting = get_object_or_404(Binary_Voting,pk=vid)
+        if not voting:
+            print("not voting " + str(voting))
             return Response({}, status=status.HTTP_401_UNAUTHORIZED)
-        start_date = voting[0].get('start_date', None)
-        end_date = voting[0].get('end_date', None)
-        not_started = not start_date or timezone.now() < parse_datetime(start_date)
-        is_closed = end_date and parse_datetime(end_date) < timezone.now()
+        start_date = voting.start_date
+        end_date = voting.end_date
+        not_started = not start_date or timezone.now() < start_date
+        is_closed = end_date and end_date < timezone.now()
         if not_started or is_closed:
+            print("not started")
             return Response({}, status=status.HTTP_401_UNAUTHORIZED)
-
         uid = request.data.get('voter')
         vote = request.data.get('vote')
 
         if not vid or not uid or not vote:
+            print("not ids vote")
             return Response({}, status=status.HTTP_400_BAD_REQUEST)
 
         # validating voter
@@ -51,18 +59,20 @@ class StoreView(generics.ListAPIView):
         voter = mods.post('authentication', entry_point='/getuser/', json={'token': token})
         voter_id = voter.get('id', None)
         if not voter_id or voter_id != uid:
+            print("not voter")
             return Response({}, status=status.HTTP_401_UNAUTHORIZED)
 
         # the user is in the census
-        perms = mods.get('census/{}'.format(vid), params={'voter_id': uid}, response=True)
+        perms = mods.get('census/{}'.format(vid,type), params={'voter_id': uid, 'type':type}, response=True)
         if perms.status_code == 401:
+            print("not census")
             return Response({}, status=status.HTTP_401_UNAUTHORIZED)
 
         a = vote.get("a")
         b = vote.get("b")
 
         defs = { "a": a, "b": b }
-        v, _ = Vote.objects.get_or_create(voting_id=vid, voter_id=uid,
+        v, _ = Vote.objects.get_or_create(voting_id=vid, voter_id=uid,type=type,
                                           defaults=defs)
         v.a = a
         v.b = b

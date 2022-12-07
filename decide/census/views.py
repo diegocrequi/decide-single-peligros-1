@@ -12,6 +12,7 @@ from rest_framework.status import (
 
 from base.perms import UserIsStaff
 from .models import Census
+from voting.models import Voting,Binary_Voting
 
 
 class CensusCreate(generics.ListCreateAPIView):
@@ -46,6 +47,7 @@ class CensusDetail(generics.RetrieveDestroyAPIView):
         return Response('Voters deleted from census', status=ST_204)
 
     def retrieve(self, request, voting_id, *args, **kwargs):
+        print(request.GET)
         voter = request.GET.get('voter_id')
         try:
             Census.objects.get(voting_id=voting_id, voter_id=voter)

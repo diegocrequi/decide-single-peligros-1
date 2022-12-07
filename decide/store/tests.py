@@ -78,7 +78,7 @@ class StoreTextCase(BaseTestCase):
             "type":"V"
         }
         response = self.client.post('/store/', data, format='json')
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 404)
 
     def test_store_vote(self):
         VOTING_PK = 345

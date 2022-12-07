@@ -391,29 +391,29 @@ class BinaryVotingTestCase(BaseTestCase):
         self.assertEqual(response.json(), 'Voting already tallied')
 
 
-    # def test_complete_voting(self):
-    #     v = self.create_voting()
-    #     self.create_voters(v)
+    def test_complete_voting(self):
+        v = self.create_voting()
+        self.create_voters(v)
 
-    #     v.create_pubkey()
-    #     v.start_date = timezone.now()
-    #     v.save()
+        v.create_pubkey()
+        v.start_date = timezone.now()
+        v.save()
 
-    #     clear = self.store_votes(v)
+        clear = self.store_votes(v)
 
-    #     self.login()  # set token
-    #     v.tally_votes(self.token)
+        self.login()  # set token
+        v.tally_votes(self.token)
 
-    #     tally = v.tally
-    #     tally.sort()
-    #     tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
+        tally = v.tally
+        tally.sort()
+        tally = {k: len(list(x)) for k, x in itertools.groupby(tally)}
 
-    #     for q in v.question.options.all():
+        for q in v.question.options.all():
             
-    #         self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
+            self.assertEqual(tally.get(q.number, 0), clear.get(q.number, 0))
 
-    #     for q in v.postproc:
-    #         self.assertEqual(tally.get(q["number"], 0), q["votes"])
+        for q in v.postproc:
+            self.assertEqual(tally.get(q["number"], 0), q["votes"])
 
 
 
